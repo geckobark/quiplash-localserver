@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Minimal working example</title>
+	<link rel="stylesheet" href="./css/bootstrap.min.css">
+	<script src="./js/jquery.min.js" crossorigin="anonymous"></script>
+	<script src="./js/bootstrap.min.js" crossorigin="anonymous"></script>
+	
+</head>
+<body>
+<div class="start m-3">
+   <form>
+     <div class="form-row">
+      <div class="col-md-4 mb-4">
+        <label for="validationDefault01">Name</label>
+        <input type="text" class="form-control" id="validationDefault01" placeholder="Name" value="" required>
+      <div class="form-group">
+      <!--<div class="form-check">
+        <input class="form-check-input" type="checkbox" value="" id="invalidCheck2" required>
+         <label class="form-check-label" for="invalidCheck2">
+           Agree to terms and conditions
+         </label>
+      </div>-->
+    </div>
+     <button class="btn btn-primary btn-lg" type="submit" id="button1">Submit</button>
+    </form>
+    <div class="start my-3">
+          <button class="btn btn-primary btn-lg" id="buttonStart">Start Game</button>
+    </div>
+	<div class="start my-3">
+          <button class="btn btn-primary btn-lg" id="buttonDisc">Disconnect</button>
+    </div>
+	<div class="respuestas">
+	<form>
+	<div class="prompt_text">
+	    <h4 id="prompt">PROMPT</h4>
+	</div>
+     <div class="form-row">
+        <label for="validationDefault01">Enviar Respuesta</label>
+        <input type="text" class="form-control" id="validationDefault02" placeholder="Answer" value="" required>
+      <div class="form-group">
+    </div>
+	<div class="start my-3">
+     <button class="btn btn-primary btn-lg" type="submit" id="btn_resp">Submit</button>
+    </div>
+	</form>
+	</div>
+	</div>
+	
+	<label for="validationDefault01">Votar</label>
+	<div class="start my-3">
+       <button class="btn btn-primary btn-lg" type="submit" id="btn_resp1">Opcion 1</button>
+    </div>
+	<div class="start my-3">
+       <button class="btn btn-primary btn-lg" type="submit" id="btn_resp2">Opcion 2</button>
+    </div>
+	
+	</div>
+	</div>
+	
+    <ul id="events"></ul>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+	
+	    var qId;
+		
+	    $("form"). submit(function () { return false; }); 
+				
+        const $events = document.getElementById('events');
+
+        const newItem = (content) => {
+          const item = document.createElement('li');
+          item.innerText = content;
+          return item;
+        };
+
+        const socket = io.connect('/', {'auto connect': false});
+
+		socket.on('msg', (data) => {
+          $events.appendChild(newItem('Me llego un mensaje: ' + data.msg + " nombre: " + data.name));
+		  if (typeof data.msg.prompt != "undefined") {
+                    console.log("Se recibio pregunta " + data.msg.prompt);
+				    qId = data.msg.id;
+					$("#prompt").text(data.msg.prompt);
+					if (typeof data.msg.choices != "undefined") {
+					    $("#btn_resp1").html(data.msg.choices.left);
+						$("#btn_resp2").html(data.msg.choices.right);
+					}
+                 }
+		  if (typeof data.msg.color != "undefined") {
+                    console.log("Se recibio color " + data.msg.color);
+					$("#validationDefault01").prop( "disabled", true );
+					$("#button1").prop( "disabled", true );
+					$("body").css('background-color', data.msg.color);
+                 }
+        });
+		
+        socket.on('connect', () => {
+          $events.appendChild(newItem('connected'));
+        });
+		
+		socket.on('disconnect', () => {
+          $events.appendChild(newItem('disconnected'));
+		  alert("Desconectado");
+        });
+		
+		socket.on('hello', (counter) => {
+		  $events.appendChild(newItem('hello - ' + counter));
+		});
+		
+		$( "#button1" ).click(function() {
+		   socket.socket.connect();
+           socket.emit('newUser', $('#validationDefault01').val());
+        });
+		
+		$( "#buttonDisc").click(function() {
+		   socket.socket.disconnect();
+		});
+		
+		$( "#buttonStart").click(function() {
+		    var myObject = {
+               action: 'customerStart'
+            }
+			socket.emit('msg', myObject);
+		});
+		
+		$( "#btn_resp").click(function() {
+		    var myObject = {
+			   action: 'answer',
+			   answer: $('#validationDefault02').val(),
+			   questionId: qId,
+            }
+			socket.emit('msg', myObject);
+			$('#validationDefault02').val('');
+		});
+		
+		$( "#btn_resp1").click(function() {
+		    console.log("Se hizo clic en el boton1");
+			var myObject = {
+			   action: 'voto',
+			   voto: 'left',
+            }
+			socket.emit('msg', myObject);
+		    //$("#btn_resp1").html("COSAS");
+		});
+		
+		$( "#btn_resp2").click(function() {
+		    console.log("Se hizo clic en el boton2");
+			var myObject = {
+               action: 'voto',
+			   voto: 'right',
+            }
+			socket.emit('msg', myObject);
+		    //$("#btn_resp1").html("COSAS");
+		});
+		
+		
+    </script>
+</body>
+</html>
